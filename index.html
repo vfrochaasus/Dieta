@@ -96,9 +96,11 @@ textarea{flex:1;resize:none;height:48px}
 #editBtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:1.15rem;cursor:pointer}
 #editPanel{width:100%;max-height:50vh;overflow:auto}
 #editPanel[hidden]{display:none}
-.er{display:grid;grid-template-columns:1fr 64px 64px 54px;gap:6px;align-items:center;padding:4px 0;border-top:1px solid var(--line);font-size:.9rem}
+.er{display:grid;grid-template-columns:1fr 70px 62px 62px;gap:6px;align-items:center;padding:4px 0;border-top:1px solid var(--line);font-size:.9rem}
 .er.hd{font-size:.75rem;color:var(--mute);border-top:0;position:sticky;top:0;background:var(--surface)}
 .er input{width:100%;padding:6px 4px;font-size:.9rem}
+.er select{width:100%;padding:6px 2px;font-size:.85rem}
+#foodForm select{width:100%}
 #fDown{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;height:44px;font:inherit}
 #fOut{width:100%;height:96px;font-size:.8rem}
 #bk{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
@@ -147,8 +149,8 @@ textarea{flex:1;resize:none;height:48px}
 <div id="foodForm" hidden>
 <div class="dh"><b>Cadastrar alimento</b><button id="fClose" aria-label="Fechar">×</button></div>
 <input id="fName" type="text" placeholder="Nome do alimento (ex.: tapioca)" aria-label="Nome do alimento">
-<div class="fr"><input id="fK" type="number" inputmode="decimal" placeholder="kcal por 100 g" aria-label="Calorias por 100 gramas"><input id="fP" type="number" inputmode="decimal" placeholder="proteína por 100 g" aria-label="Proteína por 100 gramas"></div>
-<input id="fU" type="number" inputmode="decimal" placeholder="gramas por unidade (opcional)" aria-label="Gramas por unidade">
+<select id="fM" aria-label="Como medir"><option value="g">Medir por 100 g (ou 100 ml)</option><option value="u">Medir por 1 unidade (1 ovo, 1 fatia, 1 pizza...)</option></select>
+<div class="fr"><input id="fK" type="number" inputmode="decimal" placeholder="Calorias" aria-label="Calorias"><input id="fP" type="number" inputmode="decimal" placeholder="Proteína (g)" aria-label="Proteína em gramas"></div>
 <button id="fSave">Salvar na tabela</button>
 <button id="fDown">Baixar todos os dados</button>
 <div id="fMsg"></div>
@@ -229,7 +231,7 @@ function parse(t){
     var q=null,u="",n=s;
     if(m){q=parseFloat(m[1].replace(",","."));u=norm(m[2]||"");n=m[3]}
     var f=find(n),g,est=false,label;
-    if(q===null){if(f&&f[3]){g=f[3];est=true;label="1 un (assumido)"}else{g=100;est=true;label="100 g (assumido)"}}
+    if(q===null){if(f&&f[3]){g=f[3];est=true;label="1 unidade (assumido)"}else{g=100;est=true;label="100 g (assumido)"}}
     else{
       var per=1;
       if(/^kg|^quilo/.test(u))per=1000;else if(/^litro|^l$/.test(u))per=1000;
@@ -239,7 +241,7 @@ function parse(t){
       else if(u===""&&q<=12)per=(f&&f[3])||(/^(bife|filet|file)/.test(norm(n))?100:1)
       if(u===""&&q<=12&&per===1)per=100;
       g=q*per;
-      label=(u===""&&q<=12&&f&&f[3])?nf(q)+" un":nf(g)+(/^l|^lit/.test(u)||u==="ml"?" ml":" g");
+      label=(u===""&&q<=12&&f&&f[3])?nf(q)+(q===1?" unidade":" unidades"):nf(g)+(/^l|^lit/.test(u)||u==="ml"?" ml":" g");
     }
     n=n.trim();n=n.charAt(0).toUpperCase()+n.slice(1);
     return{n:n,lb:label,g:g,k:f?Math.round(f[1]*g/100):0,p:f?Math.round(f[2]*g/10)/10:0,u:!f,e:est};
@@ -451,7 +453,7 @@ function renderFoods(){
   var el=document.getElementById("fList");el.innerHTML="";
   custom.map(function(c,i){return{c:c,i:i}}).sort(function(a,b){return a.c.n.localeCompare(b.c.n,"pt-BR")}).forEach(function(o){var c=o.c,i=o.i;
     var r=document.createElement("div");r.className="cf";
-    var s=document.createElement("span");s.textContent=c.n+" · "+nf(c.k)+" kcal · "+nf(c.p)+" g prot /100 g"+(c.u?" · "+nf(c.u)+" g/un":"");
+    var s=document.createElement("span");var uu=c.u>0;s.textContent=c.n+" · "+nf(uu?c.k*c.u/100:c.k)+" kcal · "+nf(uu?c.p*c.u/100:c.p)+" g prot "+(uu?"(1 unidade)":"(100 g)");
     var b=document.createElement("button");b.textContent="×";b.setAttribute("aria-label","Remover "+c.n);
     b.onclick=function(){custom.splice(i,1);sv("alimentos",custom);renderFoods()};
     r.appendChild(s);r.appendChild(b);el.appendChild(r);
@@ -462,12 +464,12 @@ document.getElementById("plusBtn").onclick=function(){
   if(!f.hidden)document.getElementById("fName").focus();
 };
 document.getElementById("fSave").onclick=function(){
-  var nm=document.getElementById("fName").value.trim(),k=parseFloat(document.getElementById("fK").value),p=parseFloat(document.getElementById("fP").value)||0,u=parseFloat(document.getElementById("fU").value)||0,msg=document.getElementById("fMsg");
-  if(!nm||isNaN(k)){msg.textContent="Informe o nome e as calorias por 100 g.";return}
+  var nm=document.getElementById("fName").value.trim(),k=parseFloat(document.getElementById("fK").value),p=parseFloat(document.getElementById("fP").value)||0,mode=document.getElementById("fM").value,msg=document.getElementById("fMsg");
+  if(!nm||isNaN(k)){msg.textContent="Informe o nome e as calorias.";return}
   custom=custom.filter(function(c){return norm(c.n)!==norm(nm)});
-  custom.unshift({n:nm,k:k,p:p,u:u});sv("alimentos",custom);
-  ["fName","fK","fP","fU"].forEach(function(id){document.getElementById(id).value=""});
-  msg.textContent="Salvo: "+nm+". Vale para os próximos itens que você adicionar.";renderFoods();
+  custom.unshift({n:nm,k:k,p:p,u:mode==="u"?100:0});sv("alimentos",custom);
+  ["fName","fK","fP"].forEach(function(id){document.getElementById(id).value=""});
+  msg.textContent="Salvo: "+nm+" ("+(mode==="u"?"por 1 unidade":"por 100 g")+"). Vale para os próximos itens que você adicionar.";renderFoods();
 };
 var adj=ld("ajustes",{});
 F.forEach(function(f){var a=adj[f[0][0]];if(a){f[1]=a.k;f[2]=a.p;f[3]=a.u||0}});
@@ -500,28 +502,38 @@ function renderEdit(){
   var hd=document.createElement("div");hd.className="dh";hd.innerHTML="<b>Tabela de alimentos</b>";
   var x=document.createElement("button");x.textContent="×";x.setAttribute("aria-label","Fechar sem salvar");x.onclick=closeAll;hd.appendChild(x);el.appendChild(hd);
   var body=document.createElement("div");body.id="editBody";el.appendChild(body);
-  var h=document.createElement("div");h.className="er hd";h.innerHTML="<span>Alimento</span><span>kcal/100 g</span><span>prot/100 g</span><span>g/un</span>";body.appendChild(h);
+  var h=document.createElement("div");h.className="er hd";h.innerHTML="<span>Alimento</span><span>Medida</span><span>Calorias</span><span>Proteína</span>";var nt=document.createElement("p");nt.className="note";nt.textContent="Escolha a medida de cada alimento: 100 g (ou 100 ml) ou 1 unidade. Calorias e proteína valem para essa medida.";body.appendChild(nt);body.appendChild(h);
   var refs=[];
-  function row(name,k,p,u,cb){
+  function row(name,k100,p100,gpu,cb){
     var r=document.createElement("div");r.className="er";
     var s=document.createElement("b");s.textContent=name;r.appendChild(s);
-    var lbs=["kcal","proteína","gramas por unidade"],ins=[k,p,u].map(function(v,i){
-      var inp=document.createElement("input");inp.type="number";inp.inputMode="decimal";inp.value=(i===2&&!v)?"":v;inp.setAttribute("aria-label",name+" "+lbs[i]);r.appendChild(inp);return inp;
-    });
-    refs.push({ins:ins,cb:cb});body.appendChild(r);
+    var st={mode:gpu>0?"u":"g",gpu:gpu>0?gpu:0};
+    var sel=document.createElement("select");sel.setAttribute("aria-label",name+" medida");
+    sel.innerHTML='<option value="g">100 g</option><option value="u">1 un</option>';
+    var ik=document.createElement("input"),ip=document.createElement("input");
+    [ik,ip].forEach(function(x,i){x.type="number";x.inputMode="decimal";x.setAttribute("aria-label",name+(i?" proteína":" calorias"))});
+    function fac(){return st.mode==="u"?(st.gpu||100)/100:1}
+    function rd(x){return Math.round(x*10)/10}
+    function show(kk,pp){ik.value=rd(kk*fac());ip.value=rd(pp*fac())}
+    function read(){var f=fac();return[(parseFloat(ik.value)||0)/f,(parseFloat(ip.value)||0)/f]}
+    show(k100,p100);sel.value=st.mode;
+    var m0=st.mode,k0=ik.value,p0=ip.value;
+    sel.onchange=function(){var c=read();st.mode=sel.value;if(st.mode==="u"&&!st.gpu)st.gpu=100;show(c[0],c[1])};
+    r.appendChild(sel);r.appendChild(ik);r.appendChild(ip);
+    refs.push({get:function(){if(sel.value===m0&&ik.value===k0&&ip.value===p0)return[k100,p100,gpu>0?gpu:0];var v=read();return[Math.round(v[0]*100)/100,Math.round(v[1]*100)/100,st.mode==="u"?(st.gpu||100):0]},cb:cb});body.appendChild(r);
   }
   var list=[];
   custom.forEach(function(c){list.push({nm:c.n,k:c.k,p:c.p,u:c.u||0,cb:function(k,p,u){c.k=k;c.p=p;c.u=u}})});
   F.forEach(function(f){
     var nm=f[0][0].charAt(0).toUpperCase()+f[0][0].slice(1);
-    list.push({nm:nm,k:f[1],p:f[2],u:f[3]||0,cb:function(k,p,u){if(k!==f[1]||p!==f[2]||u!==(f[3]||0)){f[1]=k;f[2]=p;f[3]=u;adj[f[0][0]]={k:k,p:p,u:u}}}});
+    list.push({nm:nm,k:f[1],p:f[2],u:f[3]||0,cb:function(k,p,u){if(Math.abs(k-f[1])>0.05||Math.abs(p-f[2])>0.05||u!==(f[3]||0)){f[1]=k;f[2]=p;f[3]=u;adj[f[0][0]]={k:k,p:p,u:u}}}});
   });
   list.sort(function(a,b){return a.nm.localeCompare(b.nm,"pt-BR")}).forEach(function(e){row(e.nm,e.k,e.p,e.u,e.cb)});
   var ft=document.createElement("div");ft.className="df";
   var cn=document.createElement("button");cn.textContent="Cancelar";cn.onclick=closeAll;
   var sb=document.createElement("button");sb.id="eSave";sb.textContent="Salvar";
   sb.onclick=function(){
-    refs.forEach(function(r){r.cb(parseFloat(r.ins[0].value)||0,parseFloat(r.ins[1].value)||0,parseFloat(r.ins[2].value)||0)});
+    refs.forEach(function(r){var v=r.get();r.cb(v[0],v[1],v[2])});
     sv("alimentos",custom);sv("ajustes",adj);renderFoods();closeAll();
   };
   ft.appendChild(cn);ft.appendChild(sb);el.appendChild(ft);
