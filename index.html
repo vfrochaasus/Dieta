@@ -209,7 +209,7 @@ var F=[
 [["banana"],89,1.1,100],[["maca"],52,.3,150],[["batata doce"],77,.6],[["batata"],52,1.2],
 [["macarrao","massa"],158,5.8],[["mandioca","aipim"],125,.6],[["cuscuz"],112,2.2],
 [["salada","alface","tomate"],15,1],[["brocolis"],35,2.4],[["azeite"],884,0,13,13,13],
-[["manteiga"],717,.9,10,10,10],[["pasta de amendoim"],588,25,15,15,15],[["amendoim"],567,26],[["cafe"],2,.1],[["pizza"],200,10,500,60]
+[["manteiga"],717,.9,10,10,10],[["pasta de amendoim"],588,25,15,15,15],[["amendoim"],567,26],[["cafe"],2,.1],[["pizza"],200,10,500,60],[["pera"],53,0.6,150]
 ];
 function norm(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
 function find(n){var s=norm(n);for(var c=0;c<custom.length;c++)if(s.indexOf(norm(custom[c].n))>-1)return[[custom[c].n],custom[c].k,custom[c].p,custom[c].u||0];for(var i=0;i<F.length;i++)for(var j=0;j<F[i][0].length;j++)if(s.indexOf(norm(F[i][0][j]))>-1)return F[i];return null}
