@@ -213,7 +213,7 @@ var F=[
 [["manteiga"],717,.9,10,10,10],[["pasta de amendoim"],588,25,15,15,15],[["amendoim"],567,26],[["cafe"],2,.1],[["pizza"],200,10,500,60],[["pera"],53,0.6,150]
 ];
 function norm(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
-function find(n){var s=norm(n);for(var c=0;c<custom.length;c++)if(s.indexOf(norm(custom[c].n))>-1)return[[custom[c].n],custom[c].k,custom[c].p,custom[c].u||0];for(var i=0;i<F.length;i++)for(var j=0;j<F[i][0].length;j++)if(s.indexOf(norm(F[i][0][j]))>-1)return F[i];return null}
+function find(n){var s=norm(n).replace(/paes/g,"pao");for(var c=0;c<custom.length;c++)if(s.indexOf(norm(custom[c].n))>-1)return[[custom[c].n],custom[c].k,custom[c].p,custom[c].u||0];for(var i=0;i<F.length;i++)for(var j=0;j<F[i][0].length;j++)if(s.indexOf(norm(F[i][0][j]))>-1)return F[i];return null}
 var NW={um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,meio:.5,meia:.5,cem:100,duzentos:200,duzentas:200,trezentos:300,trezentas:300,quatrocentos:400,quinhentos:500};
 function parse(t){
   var parts=t.split(/,(?!\d)|;|\s+e\s+|\s+mais\s+|\s+(?=\d|(?:dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|cem|duzentos|duzentas|trezentos|trezentas|quatrocentos|quinhentos)\b)/i).map(function(s){return s.trim()}).filter(Boolean);
