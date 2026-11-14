@@ -106,6 +106,8 @@ textarea{flex:1;resize:none;height:48px}
 #bk{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
 #ghSave{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;min-height:44px;font:inherit}
 #ghMsg{color:var(--mute);font-size:.9rem;min-height:1.2em}
+.edr{display:flex;gap:6px;align-items:center;width:100%}
+.ed select{padding:6px 8px}
 #bd{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40}
 #foodForm:not([hidden]),#editPanel:not([hidden]){position:fixed;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 80px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:auto}
 #editPanel:not([hidden]){display:flex;flex-direction:column;padding:0;overflow:hidden}
@@ -295,15 +297,24 @@ function itemEl(x,items,ix){
   t.onclick=function(){
     if(box.querySelector(".ed"))return;
     var ed=document.createElement("div");ed.className="ed";
-    ed.innerHTML='<input type="number" inputmode="decimal" aria-label="kcal" placeholder="kcal"><input type="number" inputmode="decimal" aria-label="proteína em g" placeholder="prot (g)"><button>Salvar</button>';
-    var ins=ed.querySelectorAll("input");ins[0].value=x.k;ins[1].value=x.p;
+    var lp=String(x.lb).match(/^([\d.,]+)\s*(g|ml|unidades?)/),
+        q0=lp?parseFloat(lp[1].replace(/\./g,"").replace(",",".")):100,
+        m0=lp?(/^un/.test(lp[2])?"u":lp[2]):"g",
+        f0=find(x.n),hasU=!!(f0&&f0[3])||m0==="u";
+    ed.innerHTML='<div class="edr"><input type="number" inputmode="decimal" aria-label="Quantidade" placeholder="quantidade"><select aria-label="Medida"><option value="g">g</option><option value="ml">ml</option>'+(hasU?'<option value="u">unidade</option>':'')+'</select></div><div class="edr"><input type="number" inputmode="decimal" aria-label="kcal" placeholder="kcal"><input type="number" inputmode="decimal" aria-label="proteína em g" placeholder="prot (g)"><button>Salvar</button></div>';
+    var ins=ed.querySelectorAll("input"),sel=ed.querySelector("select");
+    ins[0].value=q0;sel.value=m0;ins[1].value=x.k;ins[2].value=x.p;
+    function calc(){var q=parseFloat(ins[0].value);if(!(q>0))return null;var m=sel.value,rs=parse(m==="u"?q+" "+x.n:q+" "+m+" de "+x.n);return rs.length===1?rs[0]:null}
+    function recalc(){var r=calc();if(r&&!r.u){ins[1].value=r.k;ins[2].value=r.p}}
+    ins[0].oninput=recalc;sel.onchange=recalc;
     ed.querySelector("button").onclick=function(){
-      var wasU=x.u;x.k=parseFloat(ins[0].value)||0;x.p=parseFloat(ins[1].value)||0;x.u=false;
+      var wasU=x.u;x.k=parseFloat(ins[1].value)||0;x.p=parseFloat(ins[2].value)||0;x.u=false;
+      var rr=calc();if(rr&&(parseFloat(ins[0].value)!==q0||sel.value!==m0)){x.lb=rr.lb;x.g=rr.g;x.e=false}
       function gr(it){return it.g||parseFloat(String(it.lb).replace(/\./g,"").replace(",","."))||0}
       if(wasU&&x.k>0&&gr(x)>0){
         var nn=x.n.trim(),k100=Math.round(x.k/gr(x)*1000)/10,p100=Math.round(x.p/gr(x)*1000)/10;
         custom=custom.filter(function(c){return norm(c.n)!==norm(nn)});
-        custom.unshift({n:nn,k:k100,p:p100,u:0});sv("alimentos",custom);renderFoods();
+        custom.unshift({n:nn,k:k100,p:p100,u:0,ml:/ ml$/.test(String(x.lb))});sv("alimentos",custom);renderFoods();
         Object.keys(data).forEach(function(dk){data[dk].forEach(function(it){
           if(it.u&&norm(it.n)===norm(nn)&&gr(it)>0){it.k=Math.round(k100*gr(it)/100);it.p=Math.round(p100*gr(it)/10)/10;it.u=false}
         })});
